@@ -135,7 +135,7 @@
 ##' ## Pretrim and postrim are optional, and serve only to remove
 ##' ## extraneous components of the sample name added by the sequencing
 ##' ## lab. 
-##' fsa.data <- readFSA(path = system.file("pp5", package = "fragread"),
+##' fsa.data <- readFSA(path = system.file("pp5", package = "binner"),
 ##'                      pretrim = "AFLP_.*AFLP_", posttrim = "-5_Frag.*",
 ##'                      dye = "FAM")
 ##'
