@@ -1,0 +1,23 @@
+Package: binner
+Type: Package
+Title: Read fsa fragment files from an ABI Genetic Analzyer
+Version: 0.1
+Imports:
+    abind,
+    seqinr,
+    caTools,
+    data.table
+Date: 2014-11-07
+Author: Tyler W. Smith
+Maintainer: <tyler@plantarum.ca>
+Description: Functions for reading fsa fragment files.
+License: GPL (>= 3)
+OldImports: vegan,
+OldCollates: 'aflp.pcoa.R'
+    'analyze.aflp.R'
+    'combine.aflp.R'
+    'scan.fsas.R'
+    'scan.gel.R'
+    'unbin.R'
+    'old-code.R'
+    'read.genemapper.R'
