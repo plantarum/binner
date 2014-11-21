@@ -35,47 +35,58 @@
 ##' TBA
 ##'
 ##' @keywords aflp binning
-fsaRGbin <- function(pt, start = 49.999, end = 495, mxbin = 1.5, mnbin = 1){
+fsaRGbin <- function(pt, start = 49.999, end = 495, mxbin = 1.5, mnbin = 1,
+                     verbose = FALSE){
   breaks <- c(start, end)
   pt <- pt[which(pt$bp > start & pt$bp < end), ]
-  breaks <- splitBin(breaks, pt, start, end, mxbin, mnbin)
+  breaks <- splitBin(breaks, pt, start, end, mxbin, mnbin, verbose)
   return(matrix(breaks, byrow = TRUE, ncol = 2))
 }
 
-splitBin <- function(breaks, pt, clow, chigh, mxbin, mnbin){
+splitBin <- function(breaks, pt, clow, chigh, mxbin, mnbin, verbose = FALSE){
   ptsub <- pt[pt$bp > clow & pt$bp < chigh, ]
   width <- diff(range(ptsub$bp))        # calculate width on actual
                                         # fragment distribution, not on bin
-                                        # boundaries!! 
-  message("")
-  message("*******************")
-  ## print(breaks)
-  message("width = ", width)  
-  message("chigh = ", chigh)
-  message("clow = ", clow)
-  message("mxbin = ", mxbin)
+                                        # boundaries!!
+  ## debugging a deeply recursive function is tricky. Hence all my messages.
+  if(verbose) {
+    message("")
+    message("*******************")
+    message("width = ", width)  
+    message("chigh = ", chigh)
+    message("clow = ", clow)
+    message("mxbin = ", mxbin)
+  }
   if(width > mxbin) {
-    message("-- big bin")
+    ## message("-- big bin")
     big <- which.max(diff(ptsub$bp))
     mp <- mean(ptsub$bp[c(big, big + 1)]) #mp = midpoint
-    print(ptsub$bp)
+    ## print(ptsub$bp)
     mp.low <- mp - 0.05
-    message("- splitting low half")
-    message("- clow ", clow)
-    message("- mp.low ", mp.low)
+    ## message("- splitting low half")
+    ## message("- clow ", clow)
+    ## message("- mp.low ", mp.low)
     breaks <- splitBin(sort(c(breaks, mp.low)), pt, clow = clow, 
                        chigh = mp.low, mxbin, mnbin)
-    message("- splitting high half")    
+    ## message("- splitting high half")    
     breaks <- splitBin(sort(c(breaks, mp)), pt, clow = mp, 
                        chigh = chigh, mxbin, mnbin)
   } else if(width > mnbin) {
-    message("-- greater than mnbin")
+    ## message("-- greater than mnbin")
     if (nrow(ptsub) > length(unique(ptsub$sample.name))) {
-      message("- multiple peaks")
+      ## message("- multiple peaks")
       ## multiple fragments from the same individual present!
       big <- which.max(diff(ptsub$bp))
       mp <- mean(ptsub$bp[c(big, big + 1)]) #mp = midpoint
-      mp.low <- mp - 0.05
+      ## WARNING - this magic number, 0.01, can cause problems when the
+      ## algorithm creates a bin boundary between two very close
+      ## fragments!! Something more sophisticated is necessary to avoid
+      ## problematic edge cases.
+      mp.low <- mp - 0.01                   
+      ## message("head(ptsub$bp): ", paste(round(head(ptsub$bp), 4), collapse = " "))
+      ## message("big ", big)
+      ## message("mp ", mp)
+      ## message("mp.low ", mp.low)
       breaks <- splitBin(sort(c(breaks, mp.low)), pt, clow = clow, 
                          chigh = mp.low, mxbin, mnbin)
       breaks <- splitBin(sort(c(breaks, mp)), pt, clow = mp, 
