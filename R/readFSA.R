@@ -30,12 +30,17 @@
 ##' @param pretrim A regexp - text to trim off the front of the sample names.
 ##' 
 ##' @param posttrim A regexp - text to trim off the end of the sample names.
-##' 
-##' @param thresh For fsa files, lower limit of peak data to read. If this
-##' value is less than -10, all data for the selected channels will be
-##' read. It's probably not necessary to set this unless you have very
-##' large sample sizes (> 100 individuals), and if you do it will interfere
-##' with normalization later on.
+##'
+## The thresh parameter is probably unnecessary at this point, and will not
+## work until the code is updated in any case! Memory usage is much lower
+## with the refactored code, and low peaks can be filtered out later in the
+## analysis if desired
+##
+## @param thresh For fsa files, lower limit of peak data to read. If this
+## value is less than -10, all data for the selected channels will be
+## read. It's probably not necessary to set this unless you have very
+## large sample sizes (> 100 individuals), and if you do it will interfere
+## with normalization later on.
 ##'
 ##' @param ladder A vector with the fragments present in the ladder, in
 ##' order. The default is the standard GS500(-250)LIZ ladder.
@@ -167,11 +172,12 @@
 ##' }
 ##' @keywords aflp fsa genemapper peakscanner microsatellite ssr
 readFSA <- function(files = NULL, path = "./", dye, lad.channel = 105,
-                     pretrim = NA, posttrim = ".fsa", thresh = -100,
+                     pretrim = NA, posttrim = ".fsa", ## thresh = -100,
                      ladder = c(35, 50, 75, 100, 139, 150, 160, 200, 250, 300, 340, 350,
                          400, 450, 490, 500), SNR = 6000, ladder.check = 250,
                      sizing = "local", bin.width = 1, min.peak.height = 50, 
-                     baseline.width = 51, verbose = TRUE, smoothing = 3){ 
+                     baseline.width = 51, verbose = TRUE, smoothing = 3,
+                    CORES = 1){ 
 
 ######################################################
 ## Wrapper to fsa.proc, where the real work is done ##
@@ -201,7 +207,7 @@ readFSA <- function(files = NULL, path = "./", dye, lad.channel = 105,
                       thresh, ladder, SNR, ladder.check,
                       sizing, bin.width, min.peak.height,
                       baseline.width, verbose, smoothing,
-                      .total.areas, .sizing.errors)
+                      .total.areas, .sizing.errors, CORES)
       ## split out results here
       res[[fl]] <- tmp$result
       .total.areas <- tmp$ta
@@ -229,7 +235,7 @@ readFSA <- function(files = NULL, path = "./", dye, lad.channel = 105,
 fsa.proc <- function(file, files, dye, lad.channel, pretrim, posttrim, thresh,
                      ladder, SNR, ladder.check, sizing, bin.width, min.peak.height, 
                      baseline.width, verbose, smoothing, .total.areas,
-                     .sizing.errors) { 
+                     .sizing.errors, CORES = 1) { 
   ## This function started out as an anonymous function passed as an argument to do.call(rbind...)
   ## from inside readFSA. This made it really difficult to debug. So I've pulled it out into it's
   ## own function now. Note that it uses the variables .sizing.errors and .total.areas to pass
@@ -245,10 +251,11 @@ fsa.proc <- function(file, files, dye, lad.channel, pretrim, posttrim, thresh,
 
   scans <- data.frame(standard = lad.dat)
   
-  tmp <- set.ladder(lad.dat, ladder, SNR, ladder.check, verbose)
+  tmp <- set.ladder(lad.dat, ladder, SNR, ladder.check, verbose, CORES)
   if(tmp$val < 0.9999 & tmp$val > 0.99){
     message("re-sizing with lower peak threshold!")
-    tmp <- set.ladder(lad.dat, ladder, SNR, ladder.check, verbose, bad.size = TRUE)
+    tmp <- set.ladder(lad.dat, ladder, SNR, ladder.check, verbose,
+                      bad.size = TRUE, CORES)
   }
   
   scans$bp <- tmp$bp                   # ladder added to res1
@@ -376,7 +383,7 @@ tag.trimmer <- function(x, pretrim = NA, posttrim = NA) {
 }
 
 set.ladder <- function(lad.dat, ladder, SNR, ladder.check = NULL, verbose = TRUE,
-                       bad.size = FALSE) {
+                       bad.size = FALSE, CORES = 1) {
   if(verbose) message("set.ladder ->")
 
   ## Adapted from the AFLP R package of
@@ -402,11 +409,12 @@ set.ladder <- function(lad.dat, ladder, SNR, ladder.check = NULL, verbose = TRUE
 
   ## To identify the actual peak, find the value in each section that is equal to the
   ## maximum value for that section.
-  
+
+  PeakInd <- Peak %% 2 == 1
   Index <-
-    seq_len(length(lad.dat))[Peak %% 2 == 1][lad.dat[Peak %% 2 == 1] == 
-                                          ave(lad.dat[Peak %% 2 == 1],
-                                              Peak[Peak %% 2 == 1], FUN = max)]    
+    seq_len(length(lad.dat))[PeakInd][lad.dat[PeakInd] == 
+                                        ave(lad.dat[PeakInd],
+                                            Peak[PeakInd], FUN = max)]    
 
   ## Added by Tyler: ignore all peaks at or below the primer peak. This is
   ## tuned by the SNR argument. SNR in this case is a height threshold -
@@ -435,12 +443,11 @@ set.ladder <- function(lad.dat, ladder, SNR, ladder.check = NULL, verbose = TRUE
     Peak <- cumsum(abs(c(0, diff(lad.dat > quantile(lad.dat, 1 - n /
                                                              length(lad.dat))))))
     ## Peak <- peakclean(Peak) # not ready for prime time!
+    PeakInd <- Peak %% 2 == 1
     Index <-
-      seq_len(length(lad.dat))[Peak %% 2 == 1][lad.dat[Peak %% 2 == 1]
-                                         == ave(lad.dat[Peak %% 2 == 1],
-                                                        Peak[Peak %%
-                                                             2 == 1],
-                                                        FUN = max)]  
+      seq_len(length(lad.dat))[PeakInd][lad.dat[PeakInd]
+                                        == ave(lad.dat[PeakInd],
+                                                 Peak[PeakInd], FUN = max)]  
     if(max(lad.dat) > SNR){
       if (verbose) message("removing primer peak")
       primer.peak <- which(lad.dat[Index] == max(lad.dat))
@@ -471,9 +478,19 @@ set.ladder <- function(lad.dat, ladder, SNR, ladder.check = NULL, verbose = TRUE
       if(ncol(toTry) > 4000){
         toTry <- toTry[, sample(ncol(toTry), 4000)]
       }
-      Index <- Index[-toTry[, which.max(sapply(seq_len(ncol(toTry)), function(i){
-        summary(lm(ladder ~ stats::poly(Index[-toTry[, i]], 2)))$r.squared
-      }))]]
+
+      ## Note that the call to lm(...) is apparently the most expensive line
+      ## in this file. Not sure how to fix that.
+      
+      ## Could be using simplify2array(mclapply(... here, but I don't fully
+      ## understand this approach yet :(
+      sap <- sapply(seq_len(ncol(toTry)),
+             function(i){
+               summary(
+                 lm(ladder ~ stats::poly(Index[-toTry[, i]], 2))
+               )$r.squared
+             })
+      Index <- Index[-toTry[, which.max(sap)]]
     }
   }
 
