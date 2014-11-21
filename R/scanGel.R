@@ -7,9 +7,6 @@
 ##' @details This is a placeholder
 ##' @param pt A peak table, as produced by \code{fsa2PeakTab}
 ##'
-##' @param dye Which dye to read when converting to a Peakscanner table.
-##' Valid values include "FAM", "VIC, "NED" and "PET".
-##' 
 ##' @param lower Lower limit, in base pairs, of the plot
 ##' 
 ##' @param upper Upper limit, in base pairs, of the plot
@@ -34,13 +31,24 @@
 ##' @return Another placeholder
 ##' @export
 ##' @author Tyler Smith
-scanGel <- function(pt, dye, lower = 50, upper = lower + 12, step = 10, bin.lines = numeric(),
+scanGel <- function(pt, lower = 50, upper = lower + 12, step = 10, bin.lines = numeric(),
                      use.bins = FALSE, fsa = NULL, maxsamples = 50, ylim = c(0, 3500)){
   if(class(bin.lines) %in% c("matrix", "data.frame"))
     bin.lines = sort(c(bin.lines[,1], bin.lines[,2]))
-  
-  tmp <- plot.gel(pt, dye, lower, upper, step, bin.lines, use.bins)
-  geldev <- dev.cur()
+
+  win <- gwindow("gel window", visible = FALSE)
+  topgrp <- ggroup(horizontal = FALSE, container = win)
+  buttongrp <- ggroup(horizontal = TRUE, container = topgrp)
+  gbutton("scroll up", container = buttongrp)
+  gbutton("scroll down", container = buttongrp)
+  plotwin <- ggraphics(container = topgrp)
+
+  ID <- addHandlerChanged(plotwin, handler = function(h, ...){
+    tmp <- plot.gel(pt, lower, upper, step, bin.lines, use.bins)
+  })
+
+  visible(win) <- TRUE
+  ## geldev <- dev.cur()
   ## if(double.plot) {
   ##   dev.new()
   ##   fsa.plot(fsa, dye, sample = sample(1:length(levels(fsa$dat$tag)), min(maxsamples,
@@ -50,25 +58,25 @@ scanGel <- function(pt, dye, lower = 50, upper = lower + 12, step = 10, bin.line
   ##   sampledev <- dev.cur()
   ##   dev.set(geldev)
   ## }
-  oldlow <- lower
-  res <- place.bins(tmp)
-  while(!is.numeric(res)){
-    ## if(double.plot & oldlow != res$lower) {
-    ##   dev.set(sampledev)
-    ##   fsa.plot(fsa, dye, sample = sample(1:length(levels(fsa$dat$tag)), min(maxsamples,
-    ##                      length(levels(fsa$dat$tag)))), bp =
-    ##            c(res$lower, res$upper), ylim = ylim)
-    ##   abline(v = res$bin.lines, col = c("orange", "purple"))
-    ##   dev.set(geldev)
-    ##   oldlow <- res$lower
-    ## }
-    res <- place.bins(res)
-  }
+  ## oldlow <- lower
+  ## res <- place.bins(tmp)
+  ## while(!is.numeric(res)){
+  ##   ## if(double.plot & oldlow != res$lower) {
+  ##   ##   dev.set(sampledev)
+  ##   ##   fsa.plot(fsa, dye, sample = sample(1:length(levels(fsa$dat$tag)), min(maxsamples,
+  ##   ##                      length(levels(fsa$dat$tag)))), bp =
+  ##   ##            c(res$lower, res$upper), ylim = ylim)
+  ##   ##   abline(v = res$bin.lines, col = c("orange", "purple"))
+  ##   ##   dev.set(geldev)
+  ##   ##   oldlow <- res$lower
+  ##   ## }
+  ##   res <- place.bins(res)
+  ## }
   
-  return(matrix(res, ncol = 2, byrow = TRUE))
+  ## return(matrix(res, ncol = 2, byrow = TRUE))
 }
 
-plot.gel <- function(pt, dye, lower = 50, upper = lower + 6, step = 10, bin.lines = numeric(),
+plot.gel <- function(pt, lower = 50, upper = lower + 6, step = 10, bin.lines = numeric(),
                      use.bins = FALSE){
 
   if("bin" %in% colnames(pt)) {
@@ -98,7 +106,7 @@ plot.gel <- function(pt, dye, lower = 50, upper = lower + 6, step = 10, bin.line
 
   abline(v = which(id %in% reps), col = 'red', lty = 4)
   
-  heights <- pt[, dye]
+  heights <- pt[, "height"]
   hcol <- heights
   hcol[heights < 50] <- 0
   hcol[heights < 100 & heights >= 50] <- 2
@@ -117,7 +125,7 @@ plot.gel <- function(pt, dye, lower = 50, upper = lower + 6, step = 10, bin.line
   
   abline(h = bin.lines, col = c("orange", "purple"))
   
-  invisible(list(pt = pt, dye = dye, lower = lower, upper = upper,
+  invisible(list(pt = pt, lower = lower, upper = upper,
                  step = step, bin.lines = bin.lines)) 
 }
 
@@ -133,15 +141,15 @@ place.bins <- function(bv){
       if(bv$lower < bv$upper - 3){
         if(bv$step < 3)
           bv$step <- 3
-        tmp <- plot.gel(bv$pt, bv$dye, bv$lower + 1, bv$upper - 1, bv$step - 2, bv$bin.lines)
+        tmp <- plot.gel(bv$pt, bv$lower + 1, bv$upper - 1, bv$step - 2, bv$bin.lines)
         return(tmp)
       } else {
-        tmp <- plot.gel(bv$pt, bv$dye, bv$lower, bv$upper, bv$step, bv$bin.lines)
+        tmp <- plot.gel(bv$pt, bv$lower, bv$upper, bv$step, bv$bin.lines)
         return(tmp)
       }
     }
     else if (grconvertY(command$y, "user", "npc") <= 0.5) {
-      tmp <- plot.gel(bv$pt, bv$dye, bv$lower - 1, bv$upper + 1, bv$step + 2, bv$bin.lines)
+      tmp <- plot.gel(bv$pt, bv$lower - 1, bv$upper + 1, bv$step + 2, bv$bin.lines)
       return(tmp)
     }
   }
@@ -154,11 +162,11 @@ place.bins <- function(bv){
       return(bv)
   }
   else if(command$y < bv$lower){
-    tmp <- plot.gel(bv$pt, bv$dye, bv$lower - bv$step, bv$upper - bv$step, bv$step, bv$bin.lines)
+    tmp <- plot.gel(bv$pt, bv$lower - bv$step, bv$upper - bv$step, bv$step, bv$bin.lines)
     return(tmp)
   }
   else if(command$y > bv$upper){
-    tmp <- plot.gel(bv$pt, bv$dye, bv$lower + bv$step, bv$upper + bv$step, bv$step, bv$bin.lines)
+    tmp <- plot.gel(bv$pt, bv$lower + bv$step, bv$upper + bv$step, bv$step, bv$bin.lines)
     return(tmp)
   }
   else {
