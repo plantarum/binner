@@ -17,7 +17,7 @@
 ##' @title Import and process ABI data files for AFLP analyses
 ##' @author Tyler Smith \email{tyler@@plantarum.ca}
 ##' @keywords package aflp abi fsa
-##' @import abind seqinr caTools
+##' @import abind seqinr caTools gWidgets
 NA
 
 binnerVersion <- 0.1

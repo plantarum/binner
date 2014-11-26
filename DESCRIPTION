@@ -6,7 +6,8 @@ Imports:
     abind,
     seqinr,
     caTools,
-    data.table
+    data.table,
+    gWidgets
 Date: 2014-11-07
 Author: Tyler W. Smith
 Maintainer: <tyler@plantarum.ca>
