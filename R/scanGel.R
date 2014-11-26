@@ -7,46 +7,96 @@
 ##' @details This is a placeholder
 ##' @param pt A peak table, as produced by \code{fsa2PeakTab}
 ##'
-##' @param lower Lower limit, in base pairs, of the plot
-##' 
-##' @param upper Upper limit, in base pairs, of the plot
-##'
-##' @param step The size of the step, in base pairs, to make when scrolling
-##' the plot
-##'
 ##' @param bin.lines The bin boundaries to use. Can be a two column table,
 ##' with the first column being the lower boundary and the second the upper
 ##' boundary; or a vector, with odd elements lower boundaries and even
 ##' elements upper boundaries. Omit if you want to define bins completely
 ##' manually, otherwise use the output of \code{fsaRGbin}.
 ##'
-##' @param use.bins 
-##'
-##' @param fsa 
-##'
-##' @param maxsamples
-##'
-##' @param ylim
-##'
 ##' @return Another placeholder
 ##' @export
 ##' @author Tyler Smith
-scanGel <- function(pt, lower = 50, upper = lower + 12, step = 10, bin.lines = numeric(),
-                     use.bins = FALSE, fsa = NULL, maxsamples = 50, ylim = c(0, 3500)){
+##' 
+scanGel <- function(pt, bin.lines = numeric()){
   if(class(bin.lines) %in% c("matrix", "data.frame"))
     bin.lines = sort(c(bin.lines[,1], bin.lines[,2]))
 
-  win <- gwindow("gel window", visible = FALSE)
+  win <- gwindow("gel window", visible = FALSE, expand = TRUE, fill = TRUE)
   topgrp <- ggroup(horizontal = FALSE, container = win)
   buttongrp <- ggroup(horizontal = TRUE, container = topgrp)
-  gbutton("scroll up", container = buttongrp)
-  gbutton("scroll down", container = buttongrp)
+  scrollUp <- gbutton("scroll up", container = buttongrp)
+  scrollDown <- gbutton("scroll down", container = buttongrp)
   plotwin <- ggraphics(container = topgrp)
 
-  ID <- addHandlerChanged(plotwin, handler = function(h, ...){
-    tmp <- plot.gel(pt, lower, upper, step, bin.lines, use.bins)
+  .plower <- 50
+  .pupper <- 62
+  .pstep <- 10
+  
+  addHandlerChanged(scrollUp, handler = function(h, ...) {
+    .plower <<- .plower - .pstep
+    .pupper <<- .pupper - .pstep
+    plot.gel(pt, bin.lines) 
   })
 
+  addHandlerChanged(scrollDown, handler = function(h, ...) {
+    .plower <<- .plower + .pstep
+    .pupper <<- .pupper + .pstep
+    plot.gel(pt, bin.lines) 
+  })
+
+  ID <- addHandlerExpose(plotwin, handler = function(h, ...){
+    plot.gel(pt, bin.lines)
+  })
+
+  plot.gel <- function(pt, bin.lines = numeric()){
+
+    if("bin" %in% colnames(pt)) {
+      bins <- subset(pt[,3:4], !duplicated(bin) |
+                       c(!duplicated(bin)[-1], FALSE))
+    } else {
+      bins <- NA
+    }
+    
+    samples <- length(levels(pt$sample.name))
+    id <- sub("REP", "", levels(pt$sample.name))
+    reps <- id[duplicated(id) | duplicated(id, fromLast = TRUE)]
+
+    par(mar = c(2, 2, 2, 2))
+    plot(x = 1, ylim = c(.plower, .pupper), xlim = c(1, samples + 1), type = 'n',
+         yaxp = c(round(.plower, 0), round(.pupper, 0),
+           round(.pupper, 0) - round(.plower, 0)))
+    abline(v = 0:500, col = "grey", lty = 2)
+    abline(h = 0:500, col = "black", lty = 1)
+    abline(h = .plower, lwd = 3)
+    abline(h = .pupper, lwd = 3)
+
+    if(! is.na(bins))
+      abline(h = bins$Size, lty = c(2, 3), col = c("blue", "purple"))
+
+    abline(v = which(id %in% reps), col = 'red', lty = 4)
+    
+    heights <- pt[, "height"]
+    hcol <- heights
+    hcol[heights < 50] <- 0
+    hcol[heights < 100 & heights >= 50] <- 2
+    hcol[heights < 150 & heights >= 100] <- 3
+    hcol[heights >= 150 & heights < 4000] <- 1
+    hcol[heights >= 4000] <- 4
+
+    hlen <- 0.2 * (log(heights) - 3)
+
+    ## hcol <- 1
+    ## heights <- log(pt[, dye]) * 0.5
+    ## hlen <- 1/12
+    
+    segments(x0 = unclass(pt$sample.name), x1 = unclass(pt$sample.name) + 1,
+             y0 = pt$bp, y1 = pt$bp, col = hcol, lwd = 12 * hlen)
+    
+    abline(h = bin.lines, col = c("orange", "purple"))
+    
+    invisible(list(pt = pt, bin.lines = bin.lines)) 
+  }
+  
   visible(win) <- TRUE
   ## geldev <- dev.cur()
   ## if(double.plot) {
@@ -76,58 +126,7 @@ scanGel <- function(pt, lower = 50, upper = lower + 12, step = 10, bin.lines = n
   ## return(matrix(res, ncol = 2, byrow = TRUE))
 }
 
-plot.gel <- function(pt, lower = 50, upper = lower + 6, step = 10, bin.lines = numeric(),
-                     use.bins = FALSE){
 
-  if("bin" %in% colnames(pt)) {
-    bins <- subset(pt[,3:4], !duplicated(bin) | c(!duplicated(bin)[-1], FALSE))
-  } else {
-    bins <- NA
-  }
-     
-  if (use.bins & (length(bin.lines) == 0)) {
-    bin.lines <- bins$Size
-  }
-
-  samples <- length(levels(pt$sample.name))
-  id <- sub("REP", "", levels(pt$sample.name))
-  reps <- id[duplicated(id) | duplicated(id, fromLast = TRUE)]
-
-  par(mar = c(2, 2, 2, 2))
-  plot(x = 0, ylim = c(lower, upper), xlim = c(0, samples + 1), type = 'n', yaxp =
-       c(round(lower, 0), round(upper, 0), round(upper, 0) - round(lower, 0)))
-  abline(v = 0:500, col = "grey", lty = 2)
-  abline(h = 0:500, col = "black", lty = 1)
-  abline(h = lower, lwd = 3)
-  abline(h = upper, lwd = 3)
-
-  if(! is.na(bins))
-    abline(h = bins$Size, lty = c(2, 3), col = c("blue", "purple"))
-
-  abline(v = which(id %in% reps), col = 'red', lty = 4)
-  
-  heights <- pt[, "height"]
-  hcol <- heights
-  hcol[heights < 50] <- 0
-  hcol[heights < 100 & heights >= 50] <- 2
-  hcol[heights < 150 & heights >= 100] <- 3
-  hcol[heights >= 150 & heights < 4000] <- 1
-  hcol[heights >= 4000] <- 4
-
-  hlen <- 0.2 * (log(heights) - 3)
-
-  ## hcol <- 1
-  ## heights <- log(pt[, dye]) * 0.5
-  ## hlen <- 1/12
-  
-  segments(x0 = unclass(pt$sample.name), x1 = unclass(pt$sample.name) + 1,
-           y0 = pt$bp, y1 = pt$bp, col = hcol, lwd = 12 * hlen)
-  
-  abline(h = bin.lines, col = c("orange", "purple"))
-  
-  invisible(list(pt = pt, lower = lower, upper = upper,
-                 step = step, bin.lines = bin.lines)) 
-}
 
 place.bins <- function(bv){
   command <- locator(1)
