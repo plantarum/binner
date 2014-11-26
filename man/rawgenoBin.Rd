@@ -3,7 +3,8 @@
 \alias{fsaRGbin}
 \title{Locate bins using the RawGeno algorithm}
 \usage{
-fsaRGbin(pt, start = 49.999, end = 495, mxbin = 1.5, mnbin = 1)
+fsaRGbin(pt, start = 49.999, end = 495, mxbin = 1.5, mnbin = 1,
+  verbose = FALSE)
 }
 \arguments{
 \item{pt}{a peak table, as produced by \code{fsa2PeakTab}}

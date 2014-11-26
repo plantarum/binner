@@ -4,11 +4,10 @@
 \title{Read and size .fsa files}
 \usage{
 readFSA(files = NULL, path = "./", dye, lad.channel = 105, pretrim = NA,
-  posttrim = ".fsa", thresh = -100, ladder = c(35, 50, 75, 100, 139, 150,
-  160, 200, 250, 300, 340, 350, 400, 450, 490, 500), SNR = 6000,
-  ladder.check = 250, sizing = "local", bin.width = 1,
-  min.peak.height = 50, baseline.width = 51, verbose = TRUE,
-  smoothing = 3)
+  posttrim = ".fsa", ladder = c(35, 50, 75, 100, 139, 150, 160, 200, 250,
+  300, 340, 350, 400, 450, 490, 500), SNR = 6000, ladder.check = 250,
+  sizing = "local", bin.width = 1, min.peak.height = 50,
+  baseline.width = 51, verbose = TRUE, smoothing = 3, CORES = 1)
 }
 \arguments{
 \item{files}{A list of fsa files to read. If NULL (the default), all
@@ -26,12 +25,6 @@ data. The default is 105, which is the value for our system.}
 \item{pretrim}{A regexp - text to trim off the front of the sample names.}
 
 \item{posttrim}{A regexp - text to trim off the end of the sample names.}
-
-\item{thresh}{For fsa files, lower limit of peak data to read. If this
-value is less than -10, all data for the selected channels will be
-read. It's probably not necessary to set this unless you have very
-large sample sizes (> 100 individuals), and if you do it will interfere
-with normalization later on.}
 
 \item{ladder}{A vector with the fragments present in the ladder, in
 order. The default is the standard GS500(-250)LIZ ladder.}
@@ -140,7 +133,7 @@ data.
 ## Pretrim and postrim are optional, and serve only to remove
 ## extraneous components of the sample name added by the sequencing
 ## lab.
-fsa.data <- readFSA(path = system.file("pp5", package = "fragread"),
+fsa.data <- readFSA(path = system.file("pp5", package = "binner"),
                      pretrim = "AFLP_.*AFLP_", posttrim = "-5_Frag.*",
                      dye = "FAM")
 
