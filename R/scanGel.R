@@ -24,23 +24,23 @@ scanGel <- function(pt, bin.lines = numeric()){
   win <- gwindow("gel window", visible = FALSE, expand = TRUE, fill = TRUE)
   topgrp <- ggroup(horizontal = FALSE, container = win)
   buttongrp <- ggroup(horizontal = TRUE, container = topgrp)
-  scrollUp <- gbutton("scroll up", container = buttongrp)
-  scrollDown <- gbutton("scroll down", container = buttongrp)
+  pageUp <- gbutton("page up", container = buttongrp)
+  pageDown <- gbutton("page down", container = buttongrp)
   plotwin <- ggraphics(container = topgrp)
 
   .plower <- 50
   .pupper <- 62
   .pstep <- 10
   
-  addHandlerChanged(scrollUp, handler = function(h, ...) {
-    .plower <<- .plower - .pstep
-    .pupper <<- .pupper - .pstep
+  addHandlerChanged(pageUp, handler = function(h, ...) {
+    .plower <<- .plower + .pstep
+    .pupper <<- .pupper + .pstep
     plot.gel(pt, bin.lines) 
   })
 
-  addHandlerChanged(scrollDown, handler = function(h, ...) {
-    .plower <<- .plower + .pstep
-    .pupper <<- .pupper + .pstep
+  addHandlerChanged(pageDown, handler = function(h, ...) {
+    .plower <<- .plower - .pstep
+    .pupper <<- .pupper - .pstep
     plot.gel(pt, bin.lines) 
   })
 
@@ -50,16 +50,11 @@ scanGel <- function(pt, bin.lines = numeric()){
 
   plot.gel <- function(pt, bin.lines = numeric()){
 
-    if("bin" %in% colnames(pt)) {
-      bins <- subset(pt[,3:4], !duplicated(bin) |
-                       c(!duplicated(bin)[-1], FALSE))
-    } else {
-      bins <- NA
-    }
-    
     samples <- length(levels(pt$sample.name))
-    id <- sub("REP", "", levels(pt$sample.name))
-    reps <- id[duplicated(id) | duplicated(id, fromLast = TRUE)]
+    ## These two lines necessary only for coloring the replicate lanes,
+    ## which needs more thought.
+    ## id <- sub("REP", "", levels(pt$sample.name))
+    ## reps <- id[duplicated(id) | duplicated(id, fromLast = TRUE)]
 
     par(mar = c(2, 2, 2, 2))
     plot(x = 1, ylim = c(.plower, .pupper), xlim = c(1, samples + 1), type = 'n',
@@ -70,10 +65,10 @@ scanGel <- function(pt, bin.lines = numeric()){
     abline(h = .plower, lwd = 3)
     abline(h = .pupper, lwd = 3)
 
-    if(! is.na(bins))
-      abline(h = bins$Size, lty = c(2, 3), col = c("blue", "purple"))
-
-    abline(v = which(id %in% reps), col = 'red', lty = 4)
+    ## Not sure this makes sense, highlighting lanes that contain replicate
+    ## samples?
+    
+    ## abline(v = which(id %in% reps), col = 'red', lty = 4)
     
     heights <- pt[, "height"]
     hcol <- heights
@@ -92,7 +87,16 @@ scanGel <- function(pt, bin.lines = numeric()){
     segments(x0 = unclass(pt$sample.name), x1 = unclass(pt$sample.name) + 1,
              y0 = pt$bp, y1 = pt$bp, col = hcol, lwd = 12 * hlen)
     
-    abline(h = bin.lines, col = c("orange", "purple"))
+    if(length(bin.lines) > 0){
+      abline(h = bin.lines, col = c("orange", "purple"), lty = c(2, 3),
+             lwd = 2)
+      segments(x0 = 0.9, x1 = 0.9, col = "purple", lwd = 4,
+               y0 = bin.lines[(1:length(bin.lines)) %% 2 == 1],
+               y1 = bin.lines[(1:length(bin.lines)) %% 2 == 0])
+      segments(x0 = samples + 1.1, x1 = samples + 1.1, lwd = 4, col = "purple",
+               y0 = bin.lines[(1:length(bin.lines)) %% 2 == 1],
+               y1 = bin.lines[(1:length(bin.lines)) %% 2 == 0])
+    }
     
     invisible(list(pt = pt, bin.lines = bin.lines)) 
   }
