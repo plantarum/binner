@@ -23,27 +23,63 @@ scanGel <- function(pt, bin.lines = numeric()){
 
   win <- gwindow("gel window", visible = FALSE, expand = TRUE, fill = TRUE)
   topgrp <- ggroup(horizontal = FALSE, container = win)
-  buttongrp <- ggroup(horizontal = TRUE, container = topgrp)
-  pageUp <- gbutton("page up", container = buttongrp)
-  pageDown <- gbutton("page down", container = buttongrp)
   plotwin <- ggraphics(container = topgrp)
 
+  pageUpAction <- function(h, ...) {
+    .plower <<- .plower + .pstep
+    .pupper <<- .pupper + .pstep
+    plot.gel(pt, bin.lines) 
+  }
+
+  pageDownAction <- function(h, ...) {
+    .plower <<- .plower - .pstep
+    .pupper <<- .pupper - .pstep
+    plot.gel(pt, bin.lines)
+  }
+
+  zoomInAction <- function(h, ...) {
+    inc <- .pstep * 0.2
+    .pstep <<- .pstep - inc
+    .plower <<- .plower + 0.5 * inc
+    .pupper <<- .pupper - 0.5 * inc
+    plot.gel(pt, bin.lines)
+  }
+
+  zoomOutAction <- function(h, ...) {
+    inc <- .pstep * 1.25
+    .pstep <<- .pstep + inc
+    .plower <<- .plower - 0.5 * inc
+    .pupper <<- .pupper + 0.5 * inc
+    plot.gel(pt, bin.lines)
+  }
+
+  resetZoomAction <- function(h, ...) {
+    .pstep <<- 10
+    .pupper <<- .plower + 12
+    plot.gel(pt, bin.lines)
+  }
+
+  actionList <- list(
+    page_up = gaction(label = "Page Up", icon = "Page Up", handler =
+                        pageUpAction, parent = win),
+    page_down = gaction(label = "Page Down", icon = "Page Down", handler =
+                        pageDownAction, parent = win),
+    zoom_in = gaction(label = "Zoom In", icon = "Zoom In", handler =
+                        zoomInAction, parent = win),
+    zoom_out = gaction(label = "Zoom Out", icon = "Zoom Out", handler =
+                        zoomOutAction, parent = win),
+    reset_zoom= gaction(label = "Reset Zoom", icon = "Reset Zoom", handler =
+                        resetZoomAction, parent = win)
+  )
+  
+  tool_bar_list <- c(actionList, sep = gseparator())
+
+  tool_bar <- gtoolbar(tool_bar_list, cont = win)
+  
   .plower <- 50
   .pupper <- 62
   .pstep <- 10
   
-  addHandlerChanged(pageUp, handler = function(h, ...) {
-    .plower <<- .plower + .pstep
-    .pupper <<- .pupper + .pstep
-    plot.gel(pt, bin.lines) 
-  })
-
-  addHandlerChanged(pageDown, handler = function(h, ...) {
-    .plower <<- .plower - .pstep
-    .pupper <<- .pupper - .pstep
-    plot.gel(pt, bin.lines) 
-  })
-
   ID <- addHandlerExpose(plotwin, handler = function(h, ...){
     plot.gel(pt, bin.lines)
   })
@@ -72,7 +108,7 @@ scanGel <- function(pt, bin.lines = numeric()){
     
     heights <- pt[, "height"]
     hcol <- heights
-    hcol[heights < 50] <- 0
+    hcol[heights < 50] <- 5
     hcol[heights < 100 & heights >= 50] <- 2
     hcol[heights < 150 & heights >= 100] <- 3
     hcol[heights >= 150 & heights < 4000] <- 1
@@ -98,10 +134,15 @@ scanGel <- function(pt, bin.lines = numeric()){
                y1 = bin.lines[(1:length(bin.lines)) %% 2 == 0])
     }
     
-    invisible(list(pt = pt, bin.lines = bin.lines)) 
+    invisible(list(pt = pt, bin.lines = bin.lines))
+    enabled(actionList$zoom_in) <- .pstep > 5
+    enabled(actionList$zoom_out) <- .pstep < 200
+    enabled(actionList$page_down) <- .plower > 0
+    enabled(actionList$page_up) <- .pupper < 600
   }
   
   visible(win) <- TRUE
+
   ## geldev <- dev.cur()
   ## if(double.plot) {
   ##   dev.new()
