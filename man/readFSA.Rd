@@ -133,6 +133,9 @@ data.
 ## Pretrim and postrim are optional, and serve only to remove
 ## extraneous components of the sample name added by the sequencing
 ## lab.
+
+## Note that I've deliberately included a bad sample, which takes
+## considerably longer to process than clean reads.
 fsa.data <- readFSA(path = system.file("pp5", package = "binner"),
                      pretrim = "AFLP_.*AFLP_", posttrim = "-5_Frag.*",
                      dye = "FAM")
@@ -141,14 +144,24 @@ fsa.data <- readFSA(path = system.file("pp5", package = "binner"),
 fsa.data
 summary(fsa.data)
 
-## Plot the second sample
+## Plot the second sample, which has a nice, clean ladder
 plot(fsa.data, 2)
+
+## Plot the bad sample, note the funky ladder
+plot(fsa.data, fsa.data$errors[1])
+
+## Kill it! KILL IT WITH FIRE!!
+fsa.data = fsaDrop(fsa = fsa.data, epn = fsa.data$errors[1])
+
+fsa.data
+summary(fsa.data)
 
 ## Normalize the electropherograms
 fsa.norm <- fsaNormalize(fsa.data)
 
 ## Plot the second sample again, note the peak heights (y-axis) have
-## changed
+## changed, but otherwise this plot is identical to the first plot
+## above.
 plot(fsa.norm, 2)
 
 ## Convert the electropherograms into a peak table
@@ -157,10 +170,17 @@ head(peaktab)
 
 ## Binning:
 bins <- fsaRGbin(peaktab)
+
+## Review the bins:
+scanGel(peaktab, bins)
 aflp <- binSet(peaktab, bins, pref = "A")
 
 ## Extract the scoring data and proceeed with analysis:
 mydata <- aflp[, , "alleles"]
+
+## A full dataset to see some messy bins:
+bins <- fsaRGbin(oxyPT)
+scanGel(oxyPT, bins)
 
 }
 }

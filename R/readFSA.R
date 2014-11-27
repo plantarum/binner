@@ -177,13 +177,17 @@
 ##' 
 ##' ## Binning:
 ##' bins <- fsaRGbin(peaktab)
-##'
+##' 
 ##' ## Review the bins:
 ##' scanGel(peaktab, bins)
 ##' aflp <- binSet(peaktab, bins, pref = "A")
 ##'
 ##' ## Extract the scoring data and proceeed with analysis:
 ##' mydata <- aflp[, , "alleles"]
+##'
+##' ## A full dataset to see some messy bins:
+##' bins <- fsaRGbin(oxyPT)
+##' scanGel(oxyPT, bins)
 ##' 
 ##' }
 ##' @keywords aflp fsa genemapper peakscanner microsatellite ssr
