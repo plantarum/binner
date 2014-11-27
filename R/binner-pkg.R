@@ -17,7 +17,7 @@
 ##' @title Import and process ABI data files for AFLP analyses
 ##' @author Tyler Smith \email{tyler@@plantarum.ca}
 ##' @keywords package aflp abi fsa
-##' @import abind seqinr caTools gWidgets
+##' @import gWidgets
 NA
 
 binnerVersion <- 0.1
@@ -26,3 +26,8 @@ binnerVersion <- 0.1
   packageStartupMessage("binner version ", binnerVersion)
   packageStartupMessage("See ?readFsa to get started")
 }
+
+
+## from caTools import runmin, runmax
+## from seqinr import read.abif
+## from abind import abind

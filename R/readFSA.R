@@ -241,13 +241,13 @@ fsa.proc <- function(file, files, dye, lad.channel, pretrim, posttrim, thresh,
   ## own function now. Note that it uses the variables .sizing.errors and .total.areas to pass
   ## additional information back to readFSA.
   
-  abif <- read.abif(file)
+  abif <- seqinr::read.abif(file)
   tag <- tag.trimmer(basename(file), pretrim, posttrim)
   if (verbose) message("\n", which(files == file), "/", length(files), ": ", tag)
   lad.dat <- abif$Data[[paste('DATA.', lad.channel, sep='')]]
-  lad.dat <- lad.dat - runmin(lad.dat, baseline.width)
+  lad.dat <- lad.dat - caTools::runmin(lad.dat, baseline.width)
   if(smoothing > 1)
-    lad.dat <- runmean(lad.dat, k = smoothing)
+    lad.dat <- caTools::runmean(lad.dat, k = smoothing)
 
   scans <- data.frame(standard = lad.dat)
   
@@ -279,9 +279,9 @@ fsa.proc <- function(file, files, dye, lad.channel, pretrim, posttrim, thresh,
     sc <- sig.channel[i]
     dy <- dyeSafe[i]
     chan.dat <- abif$Data[[sc]]
-    chan.dat <- chan.dat - runmin(chan.dat, baseline.width)
+    chan.dat <- chan.dat - caTools::runmin(chan.dat, baseline.width)
     if(smoothing > 1)
-      chan.dat <- runmean(chan.dat, k = smoothing)
+      chan.dat <- caTools::runmean(chan.dat, k = smoothing)
     scans[[dy]] <- chan.dat
     tot.area[[dy]] <- sum(chan.dat)
   }
@@ -342,7 +342,7 @@ get.peaks <- function(scans, bin.width = 1, min.peak.height){
     bin.width <- ceiling(bin.width / ((max(bp) - min(bp)) / length(bp)))
     
     ## now identify local maxima for each bin.width size window
-    lmax <- runmax(samp, k = bin.width)
+    lmax <- caTools::runmax(samp, k = bin.width)
             
     ## select matching peaks, dropping those below minimum threshold
     peaks <- which(samp == lmax & samp > min.peak.height)

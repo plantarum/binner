@@ -91,7 +91,7 @@ binSet <- function(pt, bins, pref, hthresh = 100){
 #' 
 aflpCombine <- function(aflp1, aflp2) {
   common <- intersect(rownames(a), rownames(b))
-  return(abind(a[common,,], b[common,,], along = 2))
+  return(abind::abind(a[common,,], b[common,,], along = 2))
 }
 
 
