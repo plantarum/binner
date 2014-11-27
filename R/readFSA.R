@@ -139,7 +139,10 @@
 ##' ## Read the raw files:
 ##' ## Pretrim and postrim are optional, and serve only to remove
 ##' ## extraneous components of the sample name added by the sequencing
-##' ## lab. 
+##' ## lab.
+##'
+##' ## Note that I've deliberately included a bad sample, which takes
+##' ## considerably longer to process than clean reads.
 ##' fsa.data <- readFSA(path = system.file("pp5", package = "binner"),
 ##'                      pretrim = "AFLP_.*AFLP_", posttrim = "-5_Frag.*",
 ##'                      dye = "FAM")
@@ -147,15 +150,25 @@
 ##' ## The print function for fsa objects doesn't do much yet:
 ##' fsa.data
 ##' summary(fsa.data)
-##' 
-##' ## Plot the second sample
+##'
+##' ## Plot the second sample, which has a nice, clean ladder
 ##' plot(fsa.data, 2)
+##' 
+##' ## Plot the bad sample, note the funky ladder
+##' plot(fsa.data, fsa.data$errors[1])
+##'
+##' ## Kill it! KILL IT WITH FIRE!!
+##' fsa.data = fsaDrop(fsa = fsa.data, epn = fsa.data$errors[1])
+##'
+##' fsa.data
+##' summary(fsa.data)
 ##' 
 ##' ## Normalize the electropherograms
 ##' fsa.norm <- fsaNormalize(fsa.data)
 ##'
 ##' ## Plot the second sample again, note the peak heights (y-axis) have
-##' ## changed
+##' ## changed, but otherwise this plot is identical to the first plot
+##' ## above. 
 ##' plot(fsa.norm, 2)
 ##' 
 ##' ## Convert the electropherograms into a peak table
@@ -164,6 +177,9 @@
 ##' 
 ##' ## Binning:
 ##' bins <- fsaRGbin(peaktab)
+##'
+##' ## Review the bins:
+##' scanGel(peaktab, bins)
 ##' aflp <- binSet(peaktab, bins, pref = "A")
 ##'
 ##' ## Extract the scoring data and proceeed with analysis:
@@ -319,8 +335,8 @@ fsa.proc <- function(file, files, dye, lad.channel, pretrim, posttrim, thresh,
     stop("invalid sizing selected!")
 
   if(val < 0.9999) {
-    message("  !! sizing error: ", tag, "!!")
-    .sizing.errors <- c(.sizing.errors, tag)
+    message("  !! sizing error: ", clean.label(tag), "!!")
+    .sizing.errors <- c(.sizing.errors, clean.label(tag))
   }
 
   result <- list()
