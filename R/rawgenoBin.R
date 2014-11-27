@@ -3,7 +3,20 @@
 ##'
 ##' @description \code{fsaRGbin} identifies bins in a peak table
 ##'
-##' @details TBA
+##' @details
+##'
+##' fsaRGbin calculates bins using all peaks in a peak table, including
+##' very small ones. As a consequence, some bins may include only peaks <
+##' 50 rfus, and will therefore appear to be 'empty' in \code{scanGel()}.
+##' These empty bins should be filtered out before analysis, and are not
+##' otherwise of any concern.
+##'
+##' Note that the way the algorithm is coded, the largest bin will always
+##' be bounded on the upper side by 495. Consequently, this bin may appear
+##' quite large. It will only ever include fragments that are collectively
+##' within mxbin base pairs of each other, but may include a sizeable empty
+##' section above the actual fragments. Again, this is not a concern for
+##' subsequent analysis.
 ##'
 ##' @references
 ##'
@@ -40,7 +53,8 @@ fsaRGbin <- function(pt, start = 49.999, end = 495, mxbin = 1.5, mnbin = 1,
   breaks <- c(start, end)
   pt <- pt[which(pt$bp > start & pt$bp < end), ]
   breaks <- splitBin(breaks, pt, start, end, mxbin, mnbin, verbose)
-  return(matrix(breaks, byrow = TRUE, ncol = 2))
+  bins <- matrix(breaks, byrow = TRUE, ncol = 2)
+  return(bins)
 }
 
 splitBin <- function(breaks, pt, clow, chigh, mxbin, mnbin, verbose = FALSE){
@@ -57,12 +71,18 @@ splitBin <- function(breaks, pt, clow, chigh, mxbin, mnbin, verbose = FALSE){
     message("clow = ", clow)
     message("mxbin = ", mxbin)
   }
-  if(width > mxbin) {
+  if((width > mxbin) |                  # bin too wide
+     ((width > mnbin) & (nrow(ptsub) >  # bin has multiple peaks from same
+                                        # sample 
+                           length(unique(ptsub$sample.name))))) {
     ## message("-- big bin")
     big <- which.max(diff(ptsub$bp))
-    mp <- mean(ptsub$bp[c(big, big + 1)]) #mp = midpoint
+    mp <- max(mean(ptsub$bp[c(big, big + 1)]), # mp = midpoint
+              ptsub$bp[big + 1] - 0.2) # just below lowest frag in upper
+                                        # bin 
     ## print(ptsub$bp)
-    mp.low <- mp - 0.05
+    mp.low <- min(mp - 0.01, # just below midpoint
+                  ptsub$bp[big] + 0.2) # just above highest frag in lower bin
     ## message("- splitting low half")
     ## message("- clow ", clow)
     ## message("- mp.low ", mp.low)
@@ -71,28 +91,6 @@ splitBin <- function(breaks, pt, clow, chigh, mxbin, mnbin, verbose = FALSE){
     ## message("- splitting high half")    
     breaks <- splitBin(sort(c(breaks, mp)), pt, clow = mp, 
                        chigh = chigh, mxbin, mnbin)
-  } else if(width > mnbin) {
-    ## message("-- greater than mnbin")
-    if (nrow(ptsub) > length(unique(ptsub$sample.name))) {
-      ## message("- multiple peaks")
-      ## multiple fragments from the same individual present!
-      big <- which.max(diff(ptsub$bp))
-      mp <- mean(ptsub$bp[c(big, big + 1)]) #mp = midpoint
-      ## WARNING - this magic number, 0.01, can cause problems when the
-      ## algorithm creates a bin boundary between two very close
-      ## fragments!! Something more sophisticated is necessary to avoid
-      ## problematic edge cases.
-      mp.low <- mp - 0.01                   
-      ## message("head(ptsub$bp): ", paste(round(head(ptsub$bp), 4), collapse = " "))
-      ## message("big ", big)
-      ## message("mp ", mp)
-      ## message("mp.low ", mp.low)
-      breaks <- splitBin(sort(c(breaks, mp.low)), pt, clow = clow, 
-                         chigh = mp.low, mxbin, mnbin)
-      breaks <- splitBin(sort(c(breaks, mp)), pt, clow = mp, 
-                         chigh = chigh, mxbin, mnbin)
-    }
-  }
-  return(breaks)
+  }  return(breaks)
 }
 
