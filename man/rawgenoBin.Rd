@@ -16,7 +16,18 @@ TBA
 \code{fsaRGbin} identifies bins in a peak table
 }
 \details{
-TBA
+fsaRGbin calculates bins using all peaks in a peak table, including
+very small ones. As a consequence, some bins may include only peaks <
+50 rfus, and will therefore appear to be 'empty' in \code{scanGel()}.
+These empty bins should be filtered out before analysis, and are not
+otherwise of any concern.
+
+Note that the way the algorithm is coded, the largest bin will always
+be bounded on the upper side by 495. Consequently, this bin may appear
+quite large. It will only ever include fragments that are collectively
+within mxbin base pairs of each other, but may include a sizeable empty
+section above the actual fragments. Again, this is not a concern for
+subsequent analysis.
 }
 \examples{
 TBA

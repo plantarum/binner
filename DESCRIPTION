@@ -13,12 +13,4 @@ Author: Tyler W. Smith
 Maintainer: <tyler@plantarum.ca>
 Description: Functions for reading fsa fragment files.
 License: GPL (>= 3)
-OldImports: vegan,
-OldCollates: 'aflp.pcoa.R'
-    'analyze.aflp.R'
-    'combine.aflp.R'
-    'scan.fsas.R'
-    'scan.gel.R'
-    'unbin.R'
-    'old-code.R'
-    'read.genemapper.R'
+LazyData: true

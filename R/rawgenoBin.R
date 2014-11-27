@@ -91,6 +91,7 @@ splitBin <- function(breaks, pt, clow, chigh, mxbin, mnbin, verbose = FALSE){
     ## message("- splitting high half")    
     breaks <- splitBin(sort(c(breaks, mp)), pt, clow = mp, 
                        chigh = chigh, mxbin, mnbin)
-  }  return(breaks)
+  }
+  return(breaks)
 }
 
