@@ -1,10 +1,17 @@
 ##' @rdname scanGel
-##' @title Gel-like visualization of electropherograms, and tools to
-##' interactively manipulate bin boundaries
+##' @title Gel-like visualization of electropherograms, and GUI tools to
+##' interactively manage bins
 ##' 
-##' @description \code{scanGel} plots the raw data from an fsa file.
+##' @description \code{scanGel} plots the raw data from a set of fsa files
+##' in a slab-gel format, optionally including a set of bins. The GUI
+##' interface provides options for users to interactively add and delete
+##' bins.
 ##'
-##' @details This is a placeholder
+##' @details Electropherograms from multiple samples are collated into a
+##' single gel-like image, such as would have been produced on a slab-gel
+##' style instrument. If bin lines are provided, they will be overlaid on
+##' the gel image. The user may then add or delete bins with the mouse.
+##'
 ##' @param pt A peak table, as produced by \code{fsa2PeakTab}
 ##'
 ##' @param bin.lines The bin boundaries to use. Can be a two column matrix
@@ -12,22 +19,112 @@
 ##' second the upper boundary. Omit if you want to define bins completely
 ##' manually, otherwise use the output of \code{fsaRGbin}.
 ##'
-##' @return Another placeholder
+##' @return This function does not return anything, but is used to launch
+##' an interactive graphical viewer displaying the data in a peak table.
+##' However, see below for a discussion of the object \code{editedBins},
+##' which is placed directly in the global environment to 'return' the
+##' modified bins to the user for further use.
+##'
+##' Once launched, the viewer displays each sample in a column, and the
+##' y-axis indicates the size in base pairs of individual fragments. (If
+##' you see an empty box, click the \code{refresh} button at the top to
+##' replot the image.) Samples aren't labelled, by design, as when
+##' evaluating scoring you should not be considering the identify of
+##' individuals, but rather the quality of the data (you knew that,
+##' right?).
+##'
+##' The height of the electropherogram peak for each fragment is captured
+##' by both the color and width of the plotted band. Line width increases
+##' with the log of the peak height, so fatter bands are higher peaks.
+##' Further, color is used to indicate absolute ranges:
+##'
+##' \describe{
+##' \item{< 50 RFU: }{cyan. Note that some very low peaks are
+##' effectively invisible, although they may have been used to define bins.
+##' This causes some bins to appear empty. Such peaks are filtered out
+##' before data analysis, so not a reason for concern.}
+##' \item{50-100 RFU: }{red}
+##' \item{100-150 RFU: }{green}
+##' \item{150-4000 RFU: }{black}
+##' \item{4000+ RFU: }{dark blue}
+##' }
+##' 
+##' Later in the analysis you will be able to set a threshold to eliminate
+##' short peaks. Most studies reject peaks less than 100 or 150 RFU,
+##' corresponding to the cyan, red and possibly green bands on the image.
+##'
+##' If you have provided the \code{bin.lines} argument, your bins will be
+##' displayed as well. The lower boundary of a bin is indicated with a
+##' dashed orange line, and the upper boundary with a dotted purple line.
+##' In addition, a purple bar is placed in the margin indicating the size
+##' of the bin.
+##'
+##' The initial view starts at 50-62 bp. You can page up and down through
+##' the data with the toolbar buttons, as well as zoom the view in and out.
+##'
+##' @section Editing Bins:
+##' 
+##' Why would you want to edit the bins by hand? In short, because no
+##' algorithm will provide a perfect binning of your data. Rather than
+##' trust to the objectivity of an arbitrary algorithm, I choose to remove
+##' bins that look to have inaccurately grouped fragments.
+##'
+##' More rarely, I may split a single large bin into two, or otherwise
+##' manipulate the boundaries to better reflect the fragment pattern on the
+##' gel. Comparing the results of my hand-edited binning vs the automated
+##' binning, there is rarely a noticeable difference. But if you're
+##' obsessive about your data, you may appreciate having the ability to
+##' exclude the worst, least defined groups of fragments.
+##'
+##' In the example, scroll up to base pairs 82-85. If you feel comfortable
+##' with the algorithmic binning of this section, no problem. However, you
+##' may prefer to exclude this section, as the boundaries between
+##' successive bins are not clear.
+##' 
+##' If you click the \code{Delete Bin} button on the tool bar, you will be
+##' able to remove one bin from the view. Simply click anywhere in the area
+##' of the bin. The entire bin will be shaded out. As you do this, the
+##' modified bin list will be written to your global environment with the
+##' name \code{editedBins}. If you click the \code{Refresh} button, you
+##' will see the revised data set with the deleted bin removed.
+##'
+##' \code{Add Bin} works similarly, except that you mark your new bin by
+##' dragging the mouse across the gel to define the upper and lower
+##' boundaries with a temporary rectangle.
+##'
+##' Note: there is no undo! However, the variable you passed in to
+##' \code{scanGel} as the \code{bin.lines} argument remains unchanged. So
+##' you can easily return to the initial bins if you don't like the changes
+##' you've made. For this reason, you should *not* use \code{editedBins} as
+##' the argument for \code{scanGel}!
+##'
+##' On the other hand, there is no automatic saving of your new bins
+##' either. So if you want to keep you modified bins for future use, be
+##' sure to save \code{editedBins} to a file for safe-keeping.
+##'
 ##' @export
 ##' @author Tyler Smith
 ##'
-##' @example
+##' @examples
 ##'
 ##' \dontrun{
 ##' mybins <- fsaRGbin(oxyPT)
 ##' scanGel(oxyPT, mybins)
 ##'
+##' ## You may have to click 'Refresh' to see the gel!
+##' 
 ##' ## Any changes made to the bins in the GUI will be stored in the
 ##' ## variable editedBins:
 ##'
 ##' dim(mybins)
 ##' dim(editedBins)
 ##'
+##' ## Delete some bins
+##'
+##' dim(mybins) ## unchanged
+##'
+##' dim(editedBins) ## deleted bins are removed
+##' 
 ##' ## If you want to store your changes, make sure to save editedBins to a
 ##' ## csv file or .Rdata object!!
 ##'
@@ -81,11 +178,14 @@ scanGel <- function(pt, bin.lines = numeric()){
   deleteBinAction <- function(h, ...){
     sel <- locator(1)
     selbin <- which(bin.lines[,1] < sel$y & bin.lines[,2] > sel$y)
-    rect(ybottom = bin.lines[selbin, 1], ytop = bin.lines[selbin, 2],
-         xleft = 1, xright = length(levels(pt$sample.name)) + 1,
-         col = "#00000055")
-    bin.lines <<- bin.lines[ -selbin, ]
-    assign("editedBins", bin.lines, envir = .GlobalEnv)
+    if(length(selbin) > 0){
+      rect(ybottom = bin.lines[selbin, 1], ytop = bin.lines[selbin, 2],
+           xleft = 1, xright = length(levels(pt$sample.name)) + 1,
+           col = "#00000055")
+      bin.lines <<- bin.lines[ -selbin, ]
+      assign("editedBins", bin.lines, envir = .GlobalEnv)
+    }
+    galert("There's no bin there!")
   }
 
   addBinAction <- function(h, ...){
@@ -227,54 +327,4 @@ scanGel <- function(pt, bin.lines = numeric()){
   
   ## return(matrix(res, ncol = 2, byrow = TRUE))
 }
-
-
-
-place.bins <- function(bv){
-  command <- locator(1)
-  if(grconvertX(command$x, "user", "npc") < 0){
-    if(length(bv$bin.lines) %% 2 != 0)
-      message("odd number of bin boundaries!!")
-    return(sort(bv$bin.lines))
-  }
-  if(grconvertX(command$x, "user", "npc") > 1){
-    if(grconvertY(command$y, "user", "npc") > 0.5) {
-      if(bv$lower < bv$upper - 3){
-        if(bv$step < 3)
-          bv$step <- 3
-        tmp <- plot.gel(bv$pt, bv$lower + 1, bv$upper - 1, bv$step - 2, bv$bin.lines)
-        return(tmp)
-      } else {
-        tmp <- plot.gel(bv$pt, bv$lower, bv$upper, bv$step, bv$bin.lines)
-        return(tmp)
-      }
-    }
-    else if (grconvertY(command$y, "user", "npc") <= 0.5) {
-      tmp <- plot.gel(bv$pt, bv$lower - 1, bv$upper + 1, bv$step + 2, bv$bin.lines)
-      return(tmp)
-    }
-  }
-  else if(command$x < 0 & length(bv$bin.lines) > 0) {
-    diffs <- abs(bv$bin.lines - command$y)
-    if (min(diffs) < 0.25) {
-      abline(h = bv$bin.lines[which(diffs == min(diffs))], col = "red", lwd = 2)
-      bv$bin.lines <- bv$bin.lines[-which(diffs == min(diffs))]
-    }
-      return(bv)
-  }
-  else if(command$y < bv$lower){
-    tmp <- plot.gel(bv$pt, bv$lower - bv$step, bv$upper - bv$step, bv$step, bv$bin.lines)
-    return(tmp)
-  }
-  else if(command$y > bv$upper){
-    tmp <- plot.gel(bv$pt, bv$lower + bv$step, bv$upper + bv$step, bv$step, bv$bin.lines)
-    return(tmp)
-  }
-  else {
-    abline(h = command$y, col = "green")
-    text(x = command$x, y = command$y, labels = round(command$y, 3))
-    bv$bin.lines <- sort(c(bv$bin.lines, command$y))
-    return(bv)
-  }
-}  
 

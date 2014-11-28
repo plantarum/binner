@@ -25,6 +25,7 @@ binnerVersion <- 0.1
 .onAttach <- function(libname, pkgname) {
   packageStartupMessage("binner version ", binnerVersion)
   packageStartupMessage("See ?readFsa to get started")
+  packageStartupMessage("Additional examples and discussion in ?scanGel")
 }
 
 
