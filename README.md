@@ -12,25 +12,26 @@ provides a complete workflow for AFLP analysis:
 7. Generating presence-absence matrices for further analysis in R (or
    export for use in other programs, if you like)
 
-# Installation
+## Installation
 
-You can install `binner` using Hadley Wickham's `devtools` package.
+You can install `binner` using Hadley Wickham's
+[devtools](https://github.com/hadley/devtools) package.
 
     install.packages("devtools")
     install_github("plantarum/binner")
 
-# Help
+## Help
 
 There is no vignette for the package. I have provided a reasonably complete
 example in the help file for the function `readFSA`. Open it from with R
 with `?readFSA` (after you've loaded binner of course).
 
-# Alternatives
+## Alternatives
 There are two R-based alternatives you may like to consider as well:
 - [RawGeno](http://sourceforge.net/projects/rawgeno/)
 - [AFLP](https://r-forge.r-project.org/projects/aflp/)
 
-## [RawGeno](http://sourceforge.net/projects/rawgeno/)
+### [RawGeno](http://sourceforge.net/projects/rawgeno/)
 
 `RawGeno` currently requires the use of a second program,
 [PeakScanner](https://www.lifetechnologies.com/order/catalog/product/4381867),
@@ -44,7 +45,7 @@ If working entirely in R is useful to you, `binner` is currently preferable
 to `RawGeno`. `binner` also provides a GUI for checking and editing your bins.
 Beyond that it's a matter of preference.
 
-## [AFLP](https://r-forge.r-project.org/projects/aflp/)
+### [AFLP](https://r-forge.r-project.org/projects/aflp/)
 
 `AFLP` provides a more sophisticated workflow than `binner` or `RawGeno`, and
 provides a very powerful system for controlling for variation between
