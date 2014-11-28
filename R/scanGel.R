@@ -7,20 +7,35 @@
 ##' @details This is a placeholder
 ##' @param pt A peak table, as produced by \code{fsa2PeakTab}
 ##'
-##' @param bin.lines The bin boundaries to use. Can be a two column table,
-##' with the first column being the lower boundary and the second the upper
-##' boundary; or a vector, with odd elements lower boundaries and even
-##' elements upper boundaries. Omit if you want to define bins completely
+##' @param bin.lines The bin boundaries to use. Can be a two column matrix
+##' or data.frame, with the first column being the lower boundary and the
+##' second the upper boundary. Omit if you want to define bins completely
 ##' manually, otherwise use the output of \code{fsaRGbin}.
 ##'
 ##' @return Another placeholder
 ##' @export
 ##' @author Tyler Smith
-##' 
+##'
+##' @example
+##'
+##' \dontrun{
+##' mybins <- fsaRGbin(oxyPT)
+##' scanGel(oxyPT, mybins)
+##'
+##' ## Any changes made to the bins in the GUI will be stored in the
+##' ## variable editedBins:
+##'
+##' dim(mybins)
+##' dim(editedBins)
+##'
+##' ## If you want to store your changes, make sure to save editedBins to a
+##' ## csv file or .Rdata object!!
+##'
+##' }
 scanGel <- function(pt, bin.lines = numeric()){
-  if(class(bin.lines) %in% c("matrix", "data.frame"))
-    bin.lines = sort(c(bin.lines[,1], bin.lines[,2]))
 
+  editedBins <- bin.lines
+  
   win <- gwindow("gel window", visible = FALSE, expand = TRUE, fill = TRUE)
   topgrp <- ggroup(horizontal = FALSE, container = win)
   plotwin <- ggraphics(container = topgrp)
@@ -59,6 +74,42 @@ scanGel <- function(pt, bin.lines = numeric()){
     plot.gel(pt, bin.lines)
   }
 
+  refreshAction <- function(h, ...) {
+    plot.gel(pt, bin.lines)
+  }
+  
+  deleteBinAction <- function(h, ...){
+    sel <- locator(1)
+    selbin <- which(bin.lines[,1] < sel$y & bin.lines[,2] > sel$y)
+    rect(ybottom = bin.lines[selbin, 1], ytop = bin.lines[selbin, 2],
+         xleft = 1, xright = length(levels(pt$sample.name)) + 1,
+         col = "#00000055")
+    bin.lines <<- bin.lines[ -selbin, ]
+    assign("editedBins", bin.lines, envir = .GlobalEnv)
+  }
+
+  addBinAction <- function(h, ...){
+    unblockHandler(plotwin, addBin)
+  }
+
+  addBin <- addHandlerChanged(plotwin, handler = function(h, ...){
+    bintop <- h$y[2]
+    binbottom <- h$y[1]
+    if(sum(bin.lines <= bintop & bin.lines >= binbottom) > 0){
+      galert("invalid bin, pick again!")
+    } else {
+      rect(ybottom = binbottom, ytop = bintop,
+           xleft = 1, xright = length(levels(pt$sample.name)) + 1,
+           col = "#99000055")
+      bin.lines <<- rbind(bin.lines, h$y)
+      bin.lines <<- bin.lines[order(bin.lines[,1]), ]
+      assign("editedBins", bin.lines, envir = .GlobalEnv)
+      blockHandler(plotwin, addBin)       # return to blocked when done
+    }
+  })
+
+  blockHandler(plotwin, addBin)         # block until button clicked!
+  
   actionList <- list(
     page_up = gaction(label = "Page Up", icon = "Page Up", handler =
                         pageUpAction, parent = win),
@@ -68,24 +119,31 @@ scanGel <- function(pt, bin.lines = numeric()){
                         zoomInAction, parent = win),
     zoom_out = gaction(label = "Zoom Out", icon = "Zoom Out", handler =
                         zoomOutAction, parent = win),
-    reset_zoom= gaction(label = "Reset Zoom", icon = "Reset Zoom", handler =
-                        resetZoomAction, parent = win)
+    reset_zoom = gaction(label = "Reset Zoom", icon = "Reset Zoom",
+      handler = resetZoomAction, parent = win), 
+    sep1 = gseparator(),
+    delete_bin = gaction(label = "Delete Bin", icon = "Delete Bin",
+      handler = deleteBinAction),
+    add_bin = gaction(label = "Add Bin", icon = "Add Bin",
+      handler = addBinAction),
+    sep2 = gseparator(),
+    refresh_action = gaction(label = "Refresh", icon = "Refresh",
+      handler = refreshAction)
   )
   
-  tool_bar_list <- c(actionList, sep = gseparator())
-
-  tool_bar <- gtoolbar(tool_bar_list, cont = win)
+  tool_bar <- gtoolbar(actionList, cont = win)
   
   .plower <- 50
   .pupper <- 62
   .pstep <- 10
   
-  ID <- addHandlerExpose(plotwin, handler = function(h, ...){
-    plot.gel(pt, bin.lines)
-  })
+  ## ID <- addHandlerExpose(plotwin, handler = function(h, ...){
+  ##   message("exposed")
+  ##   plot.gel(pt, bin.lines)
+  ## })
 
-  plot.gel <- function(pt, bin.lines = numeric()){
-
+  plot.gel <- function(pt, bin.lines = NA){
+    
     samples <- length(levels(pt$sample.name))
     ## These two lines necessary only for coloring the replicate lanes,
     ## which needs more thought.
@@ -123,24 +181,23 @@ scanGel <- function(pt, bin.lines = numeric()){
     segments(x0 = unclass(pt$sample.name), x1 = unclass(pt$sample.name) + 1,
              y0 = pt$bp, y1 = pt$bp, col = hcol, lwd = 12 * hlen)
     
-    if(length(bin.lines) > 0){
-      abline(h = bin.lines, col = c("orange", "purple"), lty = c(2, 3),
-             lwd = 2)
+    if((is.matrix(bin.lines) | is.data.frame(bin.lines))
+       & nrow(bin.lines) > 0){
+      abline(h = bin.lines[, 1], col = "orange", lty = 2, lwd = 2)
+      abline(h = bin.lines[, 2], col = "purple", lty = 3, lwd = 2)
       segments(x0 = 0.9, x1 = 0.9, col = "purple", lwd = 4,
-               y0 = bin.lines[(1:length(bin.lines)) %% 2 == 1],
-               y1 = bin.lines[(1:length(bin.lines)) %% 2 == 0])
+               y0 = bin.lines[, 1], y1 = bin.lines[, 2])
       segments(x0 = samples + 1.1, x1 = samples + 1.1, lwd = 4, col = "purple",
-               y0 = bin.lines[(1:length(bin.lines)) %% 2 == 1],
-               y1 = bin.lines[(1:length(bin.lines)) %% 2 == 0])
+               y0 = bin.lines[, 1], y1 = bin.lines[, 2])
     }
     
-    invisible(list(pt = pt, bin.lines = bin.lines))
     enabled(actionList$zoom_in) <- .pstep > 5
     enabled(actionList$zoom_out) <- .pstep < 200
     enabled(actionList$page_down) <- .plower > 0
     enabled(actionList$page_up) <- .pupper < 600
+    enabled(actionList$delete_bin) <- ! is.na(bin.lines)
   }
-  
+
   visible(win) <- TRUE
 
   ## geldev <- dev.cur()
