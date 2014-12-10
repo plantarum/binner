@@ -184,8 +184,9 @@ scanGel <- function(pt, bin.lines = numeric()){
            col = "#00000055")
       bin.lines <<- bin.lines[ -selbin, ]
       assign("editedBins", bin.lines, envir = .GlobalEnv)
+    } else {
+      galert("There's no bin there!")
     }
-    galert("There's no bin there!")
   }
 
   addBinAction <- function(h, ...){
